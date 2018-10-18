@@ -1,12 +1,16 @@
 package com.github.games647.tabchannels.listener;
 
-import com.github.games647.tabchannels.Channel;
-import com.github.games647.tabchannels.Subscriber;
-import com.github.games647.tabchannels.TabChannels;
+import com.github.games647.tabchannels.*;
 
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import com.google.common.collect.Sets;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -15,83 +19,155 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+@SuppressWarnings( { "unused", "WeakerAccess" })
 public class ChatListener implements Listener {
 
-    private final TabChannels plugin;
+	private final TabChannels plugin;
 
-    public ChatListener(TabChannels plugin) {
-        this.plugin = plugin;
-    }
+	public ChatListener(TabChannels plugin) {
+		this.plugin = plugin;
+	}
 
-    //listen to the highest priority in order to let other plugins interpret it as successfull event
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
-    public void onPlayerChat(AsyncPlayerChatEvent playerChatEvent) {
-        Player sender = playerChatEvent.getPlayer();
-        String message = playerChatEvent.getMessage();
-        String format = playerChatEvent.getFormat();
-        String chatMessage = String.format(format, sender.getDisplayName(), message);
+	//listen to the highest priority in order to let other plugins interpret it as successful event
+	@EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+	public void onPlayerChat(AsyncPlayerChatEvent playerChatEvent) {
+		Player sender = playerChatEvent.getPlayer();
+		UUID senderId = sender.getUniqueId();
+		Set<UUID> recipientIds = playerChatEvent
+			.getRecipients()
+			.stream()
+			.filter(OfflinePlayer::isOnline)
+			.map(Entity::getUniqueId)
+			.collect(Collectors.toSet());
 
-        Subscriber subscriber = plugin.getSubscribers().get(sender.getUniqueId());
-        Channel messageChannel = subscriber.getCurrentChannel();
-        messageChannel.addMessage(chatMessage);
+		String message = playerChatEvent.getMessage();
+		String format = playerChatEvent.getFormat();
+		String chatMessage = String.format(format, sender.getDisplayName(), message);
 
-        notifyChanges(messageChannel);
+		Subscriber subscriber = plugin.getSubscriber(senderId);
+		Channel messageChannel = plugin.getChannel(subscriber.getCurrentChannel());
 
-        //remove the recipients from normal chats without hiding log messages
-        playerChatEvent.getRecipients().clear();
-    }
+		addMessages(messageChannel, chatMessage, recipientIds, senderId);
 
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
-    public void onJoin(PlayerJoinEvent joinEvent) {
-        Player player = joinEvent.getPlayer();
-        String joinMessage = joinEvent.getJoinMessage();
+		//remove the recipients from normal chats without hiding log messages
+		playerChatEvent.getRecipients().clear();
+	}
 
-        if (joinMessage != null && !joinMessage.isEmpty()) {
-            Subscriber subscriber = plugin.getSubscribers().get(player.getUniqueId());
-            for (Channel messageChannel : subscriber.getSubscriptions()) {
-                messageChannel.addMessage(joinMessage);
+	private void addMessages(
+		Channel channel,
+		String message,
+		Set<UUID> recipientIds,UUID senderId
+	)
+	{
+		if (channel instanceof ComponentChannel)
+		{
+			ComponentChannel componentChannel = (ComponentChannel)channel;
+			componentChannel.addMessages(
+				TextComponent.fromLegacyText(message),
+				recipientIds
+			);
+		}
+		else if (channel instanceof TextChannel)
+		{
+			TextChannel textChannel = (TextChannel)channel;
+			textChannel.addMessages(message, recipientIds);
+		}
+		else
+			return;
 
-                notifyChanges(messageChannel);
-            }
+		notifyChanges(plugin, channel, recipientIds);
+	}
 
-            joinEvent.setJoinMessage("");
-        }
-    }
+	private void addMessage(
+		Set<Channel> channels,
+		String message,
+		UUID recipientId
+	)
+	{
+		for (Channel channel : channels) {
 
-    @EventHandler(priority = EventPriority.HIGH)
-    public void onQuit(PlayerQuitEvent quitEvent) {
-        Player player = quitEvent.getPlayer();
-        String quitMessage = quitEvent.getQuitMessage();
+			if (channel instanceof ComponentChannel)
+			{
+				ComponentChannel componentChannel = (ComponentChannel)channel;
+				componentChannel.addMessage(
+					TextComponent.fromLegacyText(message),
+					recipientId
+				);
+			}
+			else if (channel instanceof TextChannel)
+			{
+				TextChannel textChannel = (TextChannel)channel;
+				textChannel.addMessage(message, recipientId);
+			}
+			else
+				continue;
 
-        if (quitMessage != null && !quitMessage.isEmpty()) {
-            Subscriber subscriber = plugin.getSubscribers().get(player.getUniqueId());
-            for (Channel messageChannel : subscriber.getSubscriptions()) {
-                messageChannel.addMessage(quitMessage);
+			notifyChanges(plugin, channel, Sets.newHashSet(recipientId));
+		}
+	}
 
-                notifyChanges(messageChannel);
-            }
+	@EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
+	public void onJoin(PlayerJoinEvent joinEvent) {
+		Player player = joinEvent.getPlayer();
+		String joinMessage = joinEvent.getJoinMessage();
+		UUID playerId = player.getUniqueId();
 
-            quitEvent.setQuitMessage("");
-        }
-    }
+		if (joinMessage != null && !joinMessage.isEmpty()) {
+			Subscriber subscriber = plugin.getSubscriber(playerId);
+			Set<Channel> channels = plugin.getSubscribedChannels(playerId);
 
-    private void notifyChanges(Channel messageChannel) {
-        for (UUID recipient : messageChannel.getRecipients()) {
-            Subscriber receiver = plugin.getSubscribers().get(recipient);
-            if (receiver != null) {
-                onNewMessage(recipient, receiver, messageChannel);
-            }
-        }
-    }
+			addMessage(channels, joinMessage, playerId);
+			joinEvent.setJoinMessage("");
+		}
+	}
 
-    private void onNewMessage(UUID recipient, Subscriber receiver, Channel messageChannel) {
-        Player recipientPlayer = Bukkit.getPlayer(recipient);
+	@EventHandler(priority = EventPriority.HIGH)
+	public void onQuit(PlayerQuitEvent quitEvent) {
+		Player player = quitEvent.getPlayer();
+		String quitMessage = quitEvent.getQuitMessage();
+		UUID playerId = player.getUniqueId();
 
-        receiver.notifyNewMessage(messageChannel);
-        Channel subscriberUsedChannel = receiver.getCurrentChannel();
+		if (quitMessage != null && !quitMessage.isEmpty()) {
+			Subscriber subscriber = plugin.getSubscriber(playerId);
+			Set<Channel> channels = plugin.getSubscribedChannels(playerId);
 
-        recipientPlayer.spigot().sendMessage(messageChannel.getHeader(messageChannel.getName(recipient)));
-        recipientPlayer.spigot().sendMessage(subscriberUsedChannel.getContent());
-        recipientPlayer.spigot().sendMessage(receiver.getChannelSelection());
-    }
+			addMessage(channels, quitMessage, playerId);
+			quitEvent.setQuitMessage("");
+		}
+	}
+
+	public static void notifyChanges(
+		TabChannels plugin,
+		Channel messageChannel,
+		Set<UUID> recipientIds
+	) {
+		if (messageChannel == null || recipientIds == null || recipientIds.isEmpty())
+			return;
+
+		for (UUID id : recipientIds) {
+			if (!messageChannel.hasRecipient(id))
+				continue;
+
+			Subscriber receiver = plugin.getSubscriber(id);
+
+			if (receiver != null) {
+				onNewMessage(plugin, id, receiver, messageChannel);
+			}
+		}
+	}
+
+	public static void onNewMessage(TabChannels plugin, UUID recipient, Subscriber receiver, Channel messageChannel) {
+		Player recipientPlayer = Bukkit.getPlayer(recipient);
+
+		receiver.notifyNewMessage(messageChannel);
+		Channel usedChannel = plugin.getChannel(receiver.getCurrentChannel());
+
+		if (usedChannel != null && recipientPlayer != null && recipientPlayer.isOnline())
+		{
+			Subscriber subscriber = plugin.getSubscriber(recipient);
+			recipientPlayer.spigot().sendMessage(usedChannel.getHeader(usedChannel.getChannelName()));
+			recipientPlayer.spigot().sendMessage(usedChannel.getContent(recipient));
+			recipientPlayer.spigot().sendMessage(subscriber.getChannelSelection());
+		}
+	}
 }

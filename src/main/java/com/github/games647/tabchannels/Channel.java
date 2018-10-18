@@ -1,114 +1,131 @@
 package com.github.games647.tabchannels;
 
+
 import com.google.common.collect.Lists;
-
-import java.util.List;
-import java.util.UUID;
-
-import net.md_5.bungee.api.ChatColor;
+import com.google.common.collect.Maps;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
-
 import org.apache.commons.lang.StringUtils;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.util.ChatPaginator;
 
-public class Channel {
+import java.util.*;
 
-    //-1 Header line -2 Chat channel selection
-    private static final int QUEUE_SIZE = ChatPaginator.OPEN_CHAT_PAGE_HEIGHT - 1 - 2;
+import static net.md_5.bungee.api.ChatColor.GREEN;
+import static org.bukkit.util.ChatPaginator.GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH;
 
-    private final String id;
-    private final String name;
-    private final boolean privateChannel;
-    private final List<String> chatHistory = Lists.newArrayListWithExpectedSize(QUEUE_SIZE);
-    private final List<UUID> recipients = Lists.newArrayList();
+@SuppressWarnings("WeakerAccess")
+public abstract class Channel<T>
+{
 
-    public Channel(String id, String name, boolean privateChannel) {
-        this.id = id;
-        this.name = StringUtils.capitalize(name);
-        this.privateChannel = privateChannel;
-    }
+	//-1 Header line -2 Chat channel selection
+	protected static final int QUEUE_SIZE = ChatPaginator.OPEN_CHAT_PAGE_HEIGHT - 1 - 2;
 
-    public Channel(String name, boolean privateChannel) {
-        this(name, name, privateChannel);
-    }
 
-    public String getId() {
-        return id;
-    }
+	protected final String id;
+	protected final String channelName;
+	protected final boolean privateChannel;
+	protected final boolean groupChannel;
 
-    public String getName(UUID self) {
-        if (self != null && privateChannel) {
-            for (UUID recipient : recipients) {
-                if (!self.equals(recipient)) {
-                    Player chatPartner = Bukkit.getPlayer(recipient);
-                    return chatPartner.getName();
-                }
-            }
-        }
+	/**
+	 * Map of Recipient UUIDs to a list of their chatHistory
+	 */
+	protected final Map<UUID, List<T>> chatMap = Maps.newHashMap();
 
-        return name;
-    }
+	@SuppressWarnings("WeakerAccess")
+	public Channel(
+		String id,
+		String channelName,
+		boolean privateChannel,
+		boolean groupChannel
+	){
+		this.id = id;
+		this.channelName = StringUtils.capitalize(channelName);
+		this.privateChannel = privateChannel;
+		this.groupChannel = groupChannel;
+	}
 
-    public boolean isPrivate() {
-        return privateChannel;
-    }
+	public Channel(String channelName, boolean privateChannel) {
+		this(
+			channelName,
+			channelName,
+			privateChannel,
+			false
+		);
+	}
 
-    public void addRecipient(UUID player) {
-        recipients.add(player);
-    }
+	public String getId() {
+		return id;
+	}
 
-    public void removeRecipient(UUID player) {
-        recipients.remove(player);
-    }
+	public boolean isGroup() { return groupChannel; }
+	public boolean isPrivate() { return privateChannel; }
 
-    public List<UUID> getRecipients() {
-        return recipients;
-    }
 
-    public List<String> getChatHistory() {
-        return chatHistory;
-    }
+	@SuppressWarnings("unused")
+	public String getChannelName() { return channelName; }
 
-    public void addMessage(String message) {
-        //-1 because of the added space after a line break
-        String[] linesToAdd = ChatPaginator.wordWrap(message, ChatPaginator.GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH - 2 - 1);
-        int oversize = chatHistory.size() + linesToAdd.length - QUEUE_SIZE;
-        for (int i = 1; i <= oversize; i++) {
-            //remove the oldest element
-            chatHistory.remove(0);
-        }
+	public String getName(UUID self) {
 
-        chatHistory.add(linesToAdd[0]);
-        for (int i = 1; i < linesToAdd.length; i++) {
-            String messagePart = ' ' + linesToAdd[i];
-            chatHistory.add(messagePart);
-        }
-    }
+		// If a uuid is specified, find a matching recipient (for private messaging)
+		// For each private conversation, a tab would appear using the recipient's channelName
+		if (self != null && privateChannel) {
+			for (UUID recipient : chatMap.keySet()) {
+				if (!self.equals(recipient)) {
+					Player chatPartner = Bukkit.getPlayer(recipient);
+					return chatPartner.getName();
+				}
+			}
+		}
 
-    public BaseComponent[] getContent() {
-        StringBuilder emptyLineBuilder = new StringBuilder();
-        for (int i = QUEUE_SIZE - chatHistory.size(); i > 0; i--) {
-            emptyLineBuilder.append("\n");
-        }
+		// When a player UUID isn't specified, just return the channel channelName.
+		return channelName;
+	}
 
-        ComponentBuilder builder = new ComponentBuilder(emptyLineBuilder.toString());
+	public BaseComponent[] getHeader(String headerName) {
 
-        //chat history
-        for (String previousMessage : chatHistory) {
-            builder.append(previousMessage).append("\n");
-        }
+		String title = ' ' + headerName + ' ';
+		String center = StringUtils.center(
+			title,
+			GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH - 2,
+			'='
+		);
 
-        builder.append(StringUtils.repeat("=", 26)).color(ChatColor.GOLD);
-        builder.create();
-        return builder.create();
-    }
+		return new ComponentBuilder(center).color(GREEN).create();
+	}
 
-    public BaseComponent[] getHeader(String headerName) {
-        String title = ' ' + headerName + ' ';
-        String center = StringUtils.center(title, ChatPaginator.GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH - 2, '=');
-        return new ComponentBuilder(center).color(ChatColor.GREEN).create();
-    }
+
+	public boolean hasRecipient(UUID playerId)
+	{
+		return chatMap.containsKey(playerId);
+	}
+
+	public void addRecipient(UUID playerId) {
+		if (!chatMap.containsKey(playerId))
+			chatMap.put(playerId, Lists.newArrayListWithExpectedSize(QUEUE_SIZE));
+	}
+
+	public void removeRecipient(UUID playerId) {
+		if (chatMap.containsKey(playerId))
+			chatMap.remove(playerId);
+	}
+
+	public List<UUID> getRecipients() {
+		return new ArrayList<>(chatMap.keySet());
+	}
+
+	@SuppressWarnings("unused")
+	public List<T> getChatHistory(UUID playerId)
+	{
+		return chatMap.getOrDefault(playerId, null);
+	}
+
+	public abstract BaseComponent[] getContent(UUID playerId);
+
+	@SuppressWarnings("unused")
+	public abstract void addMessages(T message, Set<UUID> recipientIds);
+	public abstract void addMessage(T message, UUID recipientId);
+	public abstract void broadcastMessage(T message);
 }

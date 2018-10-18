@@ -1,12 +1,8 @@
 package com.github.games647.tabchannels;
 
-import com.google.common.collect.Maps;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
-import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
@@ -14,88 +10,135 @@ import net.md_5.bungee.api.chat.ComponentBuilder;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.mutable.MutableInt;
 
+import static net.md_5.bungee.api.ChatColor.GREEN;
+import static net.md_5.bungee.api.ChatColor.YELLOW;
+import static net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND;
+
+@SuppressWarnings("WeakerAccess")
 public class Subscriber {
 
-    private static final String CHANNEL_SEPERATOR = " || ";
+	private static final String CHANNEL_SEPARATOR = " || ";
 
-    private final UUID selfUUID;
-    private Channel currentChannel;
-    private Map<Channel, MutableInt> unreadChannels = Maps.newHashMapWithExpectedSize(5);
+	@SuppressWarnings( { "FieldCanBeLocal", "unused" })
+	private final UUID selfUUID;
 
-    public Subscriber(UUID uuid, Channel global) {
-        this.selfUUID = uuid;
-        this.currentChannel = global;
-        this.unreadChannels.put(global, new MutableInt());
-    }
+	/**
+	 * The id for the Current Channel the Subscriber is watching.
+	 */
+	private String currentChannelId;
 
-    public Channel getCurrentChannel() {
-        return currentChannel;
-    }
+	/**
+	 * Map of Subscribed Channel Ids to the number of Unread messages for each
+	 */
+	private Map<String, MutableInt> unreadChannels = new ConcurrentHashMap<>();
 
-    public Set<Channel> getSubscriptions() {
-        return unreadChannels.keySet();
-    }
+	private final TabChannels plugin;
 
-    public void subscribe(Channel toSubscribe) {
-        unreadChannels.put(toSubscribe, new MutableInt());
-    }
+	public Subscriber(TabChannels plugin, UUID uuid, Channel global) {
+		this.plugin = plugin;
+		this.selfUUID = uuid;
+		this.currentChannelId = global.getId();
+		this.unreadChannels.put(global.getId(), new MutableInt());
+	}
 
-    public void unsubsribe(Channel toSubscribe) {
-        unreadChannels.remove(toSubscribe);
-    }
+	public String getCurrentChannel() {
+		return currentChannelId;
+	}
 
-    public boolean switchChannel(Channel channel) {
-        //test if the player is in this channel
-        if (unreadChannels.containsKey(channel)) {
-            this.currentChannel = channel;
-            //mark all messages as read
-            unreadChannels.get(channel).setValue(0);
-            return true;
-        }
 
-        return false;
-    }
+	public void subscribe(Channel toSubscribe) {
+		unreadChannels.put(toSubscribe.getId(), new MutableInt());
+	}
 
-    public void notifyNewMessage(Channel fromChannel) {
-        if (!fromChannel.equals(currentChannel)) {
-            MutableInt missedMessages = unreadChannels.get(fromChannel);
-            if (missedMessages != null) {
-                missedMessages.increment();
-            }
-        }
-    }
+	public void unsubscribe(Channel toSubscribe) {
+		unreadChannels.remove(toSubscribe.getId());
+	}
 
-    public int getUnreadMessages(Channel channel) {
-        MutableInt result = unreadChannels.get(channel);
-        if (result == null) {
-            return -1;
-        }
+	public boolean hasSubscribed(String channelId)
+	{
+		return unreadChannels.containsKey(channelId);
+	}
 
-        return result.intValue();
-    }
+	public List<String> getSubscriptions()
+	{
+		return new ArrayList<>(unreadChannels.keySet());
+	}
 
-    public BaseComponent[] getChannelSelection() {
-        String currentLine = " " + StringUtils.capitalize(currentChannel.getName(selfUUID));
-        ComponentBuilder builder = new ComponentBuilder(currentLine).bold(true).color(ChatColor.GREEN);
+	@SuppressWarnings("UnusedReturnValue")
+	public boolean switchChannel(Channel channel) {
+		String channelId = channel.getId();
+		//test if the player is in this channel
+		if (unreadChannels.containsKey(channelId)) {
+			this.currentChannelId = channelId;
+			//mark all messages as read
+			unreadChannels.get(channelId).setValue(0);
+			return true;
+		}
 
-        for (Map.Entry<Channel, MutableInt> entry : unreadChannels.entrySet()) {
-            Channel channel = entry.getKey();
-            int unreadMessage = entry.getValue().intValue();
-            if (!channel.equals(currentChannel)) {
-                builder.append(CHANNEL_SEPERATOR).reset();
-                builder.append(channel.getName(selfUUID))
-                        .color(ChatColor.GREEN)
-                        .event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/switch " + channel.getId()));
+		return false;
+	}
 
-                //show the number of unread messages
-                if (unreadMessage > 0) {
-                    builder.append("(").reset()
-                            .append(Integer.toString(unreadMessage)).color(ChatColor.YELLOW)
-                            .append(")").reset();
-                }
-            }
-        }
+	public void notifyNewMessage(Channel fromChannel) {
+		String channelId = fromChannel.getId();
+		if (!channelId.equals(currentChannelId)) {
+			MutableInt missedMessages = unreadChannels.get(channelId);
+			if (missedMessages != null) {
+				missedMessages.increment();
+			}
+		}
+	}
 
-        return builder.create();
-    }
+	@SuppressWarnings("unused")
+	public int getUnreadMessages(Channel channel) {
+
+		if (unreadChannels.containsKey(channel.getId()))
+		{
+			MutableInt result = unreadChannels.get(channel.getId());
+			if (result != null)
+				return result.intValue();
+		}
+		return -1;
+	}
+
+	public BaseComponent[] getChannelSelection() {
+		String newName = currentChannelId;
+
+		if (plugin.isMonitoringChannel(currentChannelId))
+			newName = "Monitor";
+
+		String currentLine = " " + StringUtils.capitalize(newName);
+		ComponentBuilder builder = new ComponentBuilder(currentLine).bold(true).color(GREEN);
+
+		for (Map.Entry<String, MutableInt> entry : unreadChannels.entrySet()) {
+
+			String channelId = entry.getKey();
+			int unreadMessage = entry.getValue().intValue();
+			Channel channel = plugin.getChannel(channelId);
+			String channelName = channel.getChannelName();
+
+			if (plugin.isMonitoringChannel(channelName.toLowerCase()))
+				channelName = "Monitor";
+
+			if (!channelId.equals(currentChannelId)) {
+				builder.append(CHANNEL_SEPARATOR).reset();
+				builder.append(channelName)
+				.color(GREEN)
+				.event(
+					new ClickEvent(
+						RUN_COMMAND,
+						"/switch " + channelId
+					)
+				);
+
+				//show the number of unread messages
+				if (unreadMessage > 0) {
+					builder.append("(").reset()
+							.append(Integer.toString(unreadMessage)).color(YELLOW)
+							.append(")").reset();
+				}
+			}
+		}
+
+		return builder.create();
+	}
 }

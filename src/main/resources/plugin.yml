@@ -10,6 +10,7 @@ description: |
     ${project.description}
 website: ${project.url}
 dev-url: ${project.url}
+api-version: 1.13
 
 # Load after Protcollib for registering the packet listener
 sofdepend: [ProtocolLib]
