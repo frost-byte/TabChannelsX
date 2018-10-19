@@ -190,7 +190,8 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 				Channel<?> subscription = channels.get(channelId);
 				subscription.removeRecipient(playerId);
 
-				if (subscription.isPrivate()) {
+
+				if (subscription.isPrivate() && subscription.hasRecipients()) {
 					//If it's a private chat remove the subscription of the partner too
 					//so it's no longer referenced and can be garbage collected
 					UUID chatPartner = subscription.getRecipients().get(0);

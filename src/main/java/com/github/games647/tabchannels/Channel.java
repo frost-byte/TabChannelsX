@@ -97,6 +97,7 @@ public abstract class Channel<T>
 	}
 
 
+	public boolean hasRecipients() { return chatMap != null && !chatMap.isEmpty(); }
 	public boolean hasRecipient(UUID playerId)
 	{
 		return chatMap.containsKey(playerId);
