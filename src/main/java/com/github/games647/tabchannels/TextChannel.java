@@ -1,15 +1,14 @@
 package com.github.games647.tabchannels;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.util.ChatPaginator;
+
 
 import static net.md_5.bungee.api.ChatColor.GOLD;
 import static org.bukkit.util.ChatPaginator.GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH;
@@ -37,54 +36,85 @@ public class TextChannel extends Channel<String>
 		);
 	}
 
+	/**
+	 * Calculate the total number of characters stored in the Channel's Message Queue
+	 * for the player with the given UUID.
+	 *
+	 * @param playerId The player whose chat history length is going to be determined.
+	 *
+	 * @return The chat history number of lines output
+	 */
 	@Override
-	public void addMessages(String message, Set<UUID> recipientIds)
+	public int getHistoryLength(UUID playerId)
 	{
-		if (message == null || message.isEmpty())
+		List<String> history = getChatHistory(playerId);
+		if (history == null || history.isEmpty())
+			return 0;
+
+		String combined = history.stream()
+			.collect(Collectors.joining());
+
+		return ChatPaginator.wordWrap(
+			combined,
+			GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH - 2 - 1
+		).length;
+	}
+
+	@Override
+	public void addMessages(Set<UUID> recipientIds, String... messages)
+	{
+		if (messages == null || messages.length == 0)
 			return;
 
 		//-1 because of the added space after a line break
+		// Convert the messages being sent into a paginated
+		// list of messages, where each line has be constrained based
+		// upon the chat page width
 		String[] linesToAdd = ChatPaginator.wordWrap(
-			message,
+			String.join("", messages),
 			GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH - 2 - 1
 		);
 
 		recipientIds.forEach(id -> {
 			List<String> history = chatMap.getOrDefault(id, new ArrayList<>());
-			int oversize = history.size() + linesToAdd.length - QUEUE_SIZE;
+			// Determine the number of lines that will overflow the chat window,
+			// so the new messages can be inserted in the recipient's updated chat window
+			int oversize = getHistoryLength(id) + linesToAdd.length - QUEUE_SIZE;
 
-			if (!history.isEmpty())
+			int i = 1;
+
+			while (!history.isEmpty() && i <= oversize)
 			{
-				for (int i = 1; i <= oversize; i++) {
-					//remove the oldest element
-					history.remove(0);
-				}
+				history.remove(0);
+				i++;
 			}
 
 			history.add(linesToAdd[0]);
 
-			for (int i = 1; i < linesToAdd.length; i++) {
+			for (i = 1; i < linesToAdd.length; i++) {
 				String messagePart = ' ' + linesToAdd[i];
 				history.add(messagePart);
 			}
+
 			chatMap.put(id, history);
 		});
 	}
 
 	@Override
-	public void addMessage(String message, UUID recipientId) {
-		if (message == null || message.isEmpty())
+	public void addMessage(UUID recipientId, String... messages) {
+		if (messages == null || messages.length == 0)
 			return;
 
 		//-1 because of the added space after a line break
 		String[] linesToAdd = ChatPaginator.wordWrap(
-			message,
+			Arrays.toString(messages),
 			GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH - 2 - 1
 		);
+		// Get the lines of text from the recipient's current chat history in the channel
 		List<String> history = chatMap.getOrDefault(recipientId, new ArrayList<>());
-		int oversize = history.size() + linesToAdd.length - QUEUE_SIZE;
+		int oversize = getHistoryLength(recipientId) + linesToAdd.length - QUEUE_SIZE;
 
-		for (int i = 1; i <= oversize; i++) {
+		for (int i = 1; i <= oversize && i < history.size(); i++) {
 			//remove the oldest element
 			history.remove(0);
 		}
@@ -99,13 +129,13 @@ public class TextChannel extends Channel<String>
 	}
 
 	@Override
-	public void broadcastMessage(String message)
+	public void broadcastMessage(String... messages)
 	{
-		if (message == null || message.isEmpty())
+		if (messages == null || messages.length == 0)
 			return;
 
 		for (UUID uuid : chatMap.keySet())
-			addMessage(message, uuid);
+			addMessage(uuid, messages);
 	}
 
 	@Override

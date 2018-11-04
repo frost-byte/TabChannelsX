@@ -3,16 +3,21 @@ package com.github.games647.tabchannels;
 
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
-import org.apache.commons.lang.StringUtils;
+
 import org.bukkit.util.ChatPaginator;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static net.md_5.bungee.api.ChatColor.GOLD;
+import static net.md_5.bungee.api.chat.BaseComponent.toPlainText;
+import static net.md_5.bungee.api.chat.ComponentBuilder.FormatRetention.*;
+import static org.apache.commons.lang.StringUtils.repeat;
+import static org.bukkit.util.ChatPaginator.AVERAGE_CHAT_PAGE_WIDTH;
 import static org.bukkit.util.ChatPaginator.GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH;
 
 @SuppressWarnings("unused")
-public class ComponentChannel extends Channel<BaseComponent[]>
+public class ComponentChannel extends Channel<BaseComponent>
 {
 	@SuppressWarnings("WeakerAccess")
 	public ComponentChannel(
@@ -24,6 +29,7 @@ public class ComponentChannel extends Channel<BaseComponent[]>
 		super(id, channelName, privateChannel, groupChannel);
 	}
 
+	@SuppressWarnings("WeakerAccess")
 	public ComponentChannel(String channelName, boolean privateChannel) {
 		super(
 			channelName,
@@ -33,73 +39,92 @@ public class ComponentChannel extends Channel<BaseComponent[]>
 		);
 	}
 
+	@Override public int getHistoryLength(UUID playerId)
+	{
+		return chatHistoryLength(playerId);
+	}
+
 	// Get the number of actual lines of text from all the components
 	// in the current history
 	private int chatHistoryLength(UUID playerId)
 	{
-		List<BaseComponent[]> history = getChatHistory(playerId);
+		if (playerId == null)
+			return 0;
+
+		List<BaseComponent> history = getChatHistory(playerId);
 
 		if (history == null || history.isEmpty())
 			return 0;
 
-		return history.stream()
-			.mapToInt(this::numComponentLines)
-			.sum();
+		return numComponentLines(history);
 	}
 
-	private int numComponentLines(BaseComponent[] components)
+	@SuppressWarnings("Convert2MethodRef")
+	private int numComponentLines(List<BaseComponent> components)
 	{
-		String combined = BaseComponent.toLegacyText(components);
+		String combined = components.stream()
+			.map(c -> toPlainText(c))
+			.collect(Collectors.joining());
+
+		// Note: Unfortunately, due to the users
+		// each potentially using resource packs with different fonts
+		// the number of characters per line in their Chat Pages can vary
+		// significantly.
 		return ChatPaginator.wordWrap(
 			combined,
-			GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH - 2 - 1
+			AVERAGE_CHAT_PAGE_WIDTH
+		).length;
+	}
+
+	private int numComponentLines(BaseComponent component)
+	{
+		return ChatPaginator.wordWrap(
+			component.toPlainText(),
+			AVERAGE_CHAT_PAGE_WIDTH
 		).length;
 	}
 
 	private void removeOverflow(UUID playerId, int messageLength)
 	{
-		List<BaseComponent[]> history = getChatHistory(playerId);
+		List<BaseComponent> history = getChatHistory(playerId);
 
 		// Calculate the number of lines contained in the history's
 		// components plus the number of lines contained in the new Message
 		// and subtract the queue size (or total number of lines that can be
 		// displayed)
-		int historyLength = chatHistoryLength(playerId);
-		int entriesToRemove = 0;
+		int historyLength = numComponentLines(history);
 		int oversize = historyLength + messageLength - QUEUE_SIZE;
-		int numLines;
+		int i = 1;
 
 		// Remove older components to make room for the new one.
-		if (!history.isEmpty())
+		while (i <= oversize)
 		{
-			for (BaseComponent[] components : history)
+			//remove the oldest element
+			if (!history.isEmpty())
 			{
-				numLines = numComponentLines(components);
-				entriesToRemove += 1;
-				oversize -= numLines;
-
-				if (oversize <= 0)
-					break;
-			}
-
-			for (int i = 1; i <= entriesToRemove; i++)
-				//remove the oldest element
+				i += numComponentLines(history.get(0));
 				history.remove(0);
+			}
+			else
+				break;
 		}
+		chatMap.put(playerId, history);
 	}
+
 	@Override
-	public void addMessages(BaseComponent[] message, Set<UUID> recipientIds)
+	public void addMessages(Set<UUID> recipientIds, BaseComponent... messages)
 	{
-		if (message == null)
+		if (messages == null || messages.length == 0)
 			return;
 
-		int messageLength = numComponentLines(message);
+		List<BaseComponent> componentList = Arrays.asList(messages);
+		int messageLength = numComponentLines(componentList);
 		for (UUID recipientId : recipientIds)
 		{
-			List<BaseComponent[]> history = getChatHistory(recipientId);
 			removeOverflow(recipientId, messageLength);
+			List<BaseComponent> history = getChatHistory(recipientId);
 
-			history.add(message);
+			history.addAll(componentList);
 
 			chatMap.put(
 				recipientId,
@@ -109,14 +134,15 @@ public class ComponentChannel extends Channel<BaseComponent[]>
 	}
 
 	@Override
-	public void addMessage(BaseComponent[] message, UUID recipientId) {
-		if (message == null)
+	public void addMessage(UUID recipientId, BaseComponent... messages) {
+		if (messages == null || messages.length == 0)
 			return;
 
-		List<BaseComponent[]> history = getChatHistory(recipientId);
-		removeOverflow(recipientId, numComponentLines(message));
+		List<BaseComponent> componentList = Arrays.asList(messages);
+		removeOverflow(recipientId, numComponentLines(componentList));
 
-		history.add(message);
+		List<BaseComponent> history = getChatHistory(recipientId);
+		history.addAll(componentList);
 
 		// This was meant to split the input message that was in text
 		// into multiple lines. The 0 slot in the array was added
@@ -131,40 +157,50 @@ public class ComponentChannel extends Channel<BaseComponent[]>
 	}
 
 	@Override
-	public void broadcastMessage(BaseComponent[] message)
+	public void broadcastMessage(BaseComponent... messages)
 	{
-		if (message == null)
+		if (messages == null || messages.length == 0)
 			return;
 
-		addMessages(message, chatMap.keySet());
+		addMessages(chatMap.keySet(), messages);
 	}
 
 	@Override
 	public BaseComponent[] getContent(UUID playerId) {
-		StringBuilder emptyLineBuilder = new StringBuilder();
-
-		List<BaseComponent[]> history = chatMap.getOrDefault(playerId, null);
+		List<BaseComponent> history = chatMap.getOrDefault(playerId, null);
 
 		if (history == null)
 			return null;
 
+		ComponentBuilder emptyLineBuilder = new ComponentBuilder("");
 		// Fill in the empty space in the output
 		// above the current messages in the history
-		for (int i = QUEUE_SIZE - history.size(); i > 0; i--) {
+		int lines = (history.size() > 0) ? numComponentLines(history) : 0;
+
+		for (int i = QUEUE_SIZE - lines; i > 1; i--)
 			emptyLineBuilder.append("\n");
-		}
 
 		// Convert the empty lines into a component.
-		ComponentBuilder builder = new ComponentBuilder(emptyLineBuilder.toString());
+		ComponentBuilder builder = new ComponentBuilder(emptyLineBuilder);
 
 		// Add the chat history to the output
-		for (BaseComponent[] previousMessage : history) {
-			builder.append(previousMessage).append("\n");
-		}
+		boolean prevStylized = false;
+
+		// Prevent formatting from carrying over between elements
+		history.forEach(component -> builder.append(
+			component,
+			NONE
+		));
 
 		// Add the separator for the line before footer.
-		builder.append(StringUtils.repeat("=", 26)).color(GOLD);
-		builder.create();
+		builder.append(
+			repeat(
+				"=",
+				GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH - 7
+			)
+		)
+		.color(GOLD);
+
 		return builder.create();
 	}
 }

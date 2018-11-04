@@ -1,6 +1,7 @@
 package com.github.games647.tabchannels;
 
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -16,7 +17,7 @@ import java.util.*;
 import static net.md_5.bungee.api.ChatColor.GREEN;
 import static org.bukkit.util.ChatPaginator.GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH;
 
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings( { "WeakerAccess", "unchecked" })
 public abstract class Channel<T>
 {
 
@@ -97,6 +98,7 @@ public abstract class Channel<T>
 	}
 
 
+	public abstract int getHistoryLength(UUID playerId);
 	public boolean hasRecipients() { return chatMap != null && !chatMap.isEmpty(); }
 	public boolean hasRecipient(UUID playerId)
 	{
@@ -120,13 +122,15 @@ public abstract class Channel<T>
 	@SuppressWarnings("unused")
 	public List<T> getChatHistory(UUID playerId)
 	{
+		playerId = Preconditions.checkNotNull(playerId, "The player UUID cannot be null.");
+
 		return chatMap.getOrDefault(playerId, null);
 	}
 
 	public abstract BaseComponent[] getContent(UUID playerId);
 
-	@SuppressWarnings("unused")
-	public abstract void addMessages(T message, Set<UUID> recipientIds);
-	public abstract void addMessage(T message, UUID recipientId);
-	public abstract void broadcastMessage(T message);
+	@SuppressWarnings({"unused"})
+	public abstract void addMessages(Set<UUID> recipientIds, T... messages);
+	public abstract void addMessage(UUID recipientId, T... messages);
+	public abstract void broadcastMessage(T... messages);
 }

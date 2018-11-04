@@ -21,6 +21,7 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.bukkit.ChatColor.DARK_RED;
 
 public class TabChannels extends JavaPlugin implements TabChannelsManager
@@ -30,9 +31,9 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	/**
 	 * Map of Channel Ids to their Channel
 	 */
-	private final Map<String, Channel> channels = new ConcurrentHashMap<>();
+	private final Map<String, Channel<?>> channels = new ConcurrentHashMap<>();
 
-	private final TextChannel globalChannel = new TextChannel("global", false);
+	private final ComponentChannel globalChannel = new ComponentChannel("global", false);
 	private final String MONITORING_CHANNEL_ID_PREFIX = "mon_";
 
 	@SuppressWarnings("FieldCanBeLocal")
@@ -49,20 +50,24 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 		//register listeners
 		PluginManager pm  = Bukkit.getPluginManager();
 		pm.registerEvents(new SubscriptionListener(this), this);
+		pm.registerEvents(new ChatListener(this), this);
 //        if (getServer().getPluginManager().isPluginEnabled("ProtocolLib")) {
 //            //we cannot register it here because Java wouldn't know the type specification
 //            PacketChatListener.createInstance(this);
 //        } else {
-		pm.registerEvents(new ChatListener(this), this);
 //        }
 
-		getServer().getServicesManager().register(TabChannelsManager.class, this, this, ServicePriority.Normal);
+		getServer().getServicesManager().register(
+			TabChannelsManager.class,
+			this,
+			this,
+			ServicePriority.Normal
+		);
 		channels.put(globalChannel.getId(), globalChannel);
 
 		//load all players if the server is already started like in a reload
-		for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-			loadPlayer(onlinePlayer);
-		}
+		Bukkit.getOnlinePlayers()
+			.forEach(this::loadPlayer);
 	}
 
 	public void switchChannel(Player sender, String channelId)
@@ -108,6 +113,28 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 		return channels.getOrDefault(id, null);
 	}
 
+	@Override
+	public void createComponentChannel(
+		String channelName,
+		String channelId,
+		boolean isPrivate,
+		boolean isGroup
+	){
+		if (!getChannels().containsKey(channelName))
+		{
+			Channel newChannel = new ComponentChannel(
+				channelId,
+				channelName,
+				isPrivate,
+				isGroup
+			);
+			channels.put(
+				channelId,
+				newChannel
+			);
+		}
+	}
+
 	@SuppressWarnings("unused")
 	public Channel getChannelByName(String channelName)
 	{
@@ -123,7 +150,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 		return null;
 	}
 
-	public Map<String, Channel> getChannels() {
+	public Map<String, Channel<?>> getChannels() {
 		return channels;
 	}
 
@@ -364,7 +391,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 		}
 	}
 
-	@Override public void sendMessage(String message, String channelId)
+	@Override public void sendMessage(String channelId, String... messages)
 	{
 		if (hasChannel(channelId))
 		{
@@ -372,7 +399,33 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 
 			if (channel != null)
 			{
-				channel.broadcastMessage(message);
+				channel.broadcastMessage(messages);
+				ChatListener.notifyChanges(
+					this,
+					channel,
+					Sets.newHashSet(channel.getRecipients())
+				);
+			}
+		}
+	}
+
+	@Override public void broadcastMessage(String channelName, String... messages)
+	{
+		sendMessage(channelName, messages);
+	}
+
+	@Override public void sendComponent(String channelId, BaseComponent... components)
+	{
+		channelId = checkNotNull(channelId, "The Channel Id must not be null.");
+		components = checkNotNull(components, "The base components cannot be null.");
+
+		if (hasChannel(channelId))
+		{
+			ComponentChannel channel = (ComponentChannel)channels.get(channelId);
+
+			if (channel != null)
+			{
+				channel.broadcastMessage(components);
 				ChatListener.notifyChanges(
 					this,
 					channel,
@@ -383,29 +436,49 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 		}
 	}
 
-	@Override public void broadcastMessage(String message, String channelName)
-	{
-		sendMessage(message, channelName);
-	}
-
-	@Override public void sendComponent(String channelName, BaseComponent... components)
-	{
-
-	}
-
 	@Override public void sendComponent(String channelId, UUID playerId, BaseComponent... components)
 	{
+		channelId = checkNotNull(
+			channelId,
+			"The Channel Id must not be null."
+		);
+		playerId = checkNotNull(
+			playerId,
+			"The Player Id must not be null."
+		);
+		components = checkNotNull(
+			components,
+			"The base components cannot be null."
+		);
 
+		if (hasChannel(channelId))
+		{
+			ComponentChannel channel = (ComponentChannel)channels.get(channelId);
+
+			if (channel != null)
+			{
+				channel.addMessage(playerId, components);
+				ChatListener.notifyChanges(
+					this,
+					channel,
+					Sets.newHashSet(channel.getRecipients())
+				);
+
+			}
+		}
 	}
 
-	@Override public void broadcastComponent(String channelName, BaseComponent... components)
+	@Override public void broadcastComponent(String channelId, BaseComponent... components)
 	{
+		channelId = checkNotNull(channelId, "The Channel Id must not be null.");
+		components = checkNotNull(components, "The base components cannot be null.");
 
+		sendComponent(channelId, components);
 	}
 
-	@Override public void sendMessage(String message, String channelId, UUID playerId)
+	@Override public void sendMessage(String channelId, UUID playerId, String... messages)
 	{
-		if (playerId == null || message == null || message.isEmpty())
+		if (playerId == null || messages == null || messages.length == 0)
 			return;
 
 		if (hasChannel(channelId))
@@ -414,7 +487,8 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 
 			if (channel != null && channel.hasRecipient(playerId))
 			{
-				channel.addMessage(message, playerId);
+				channel.addMessage(playerId, Arrays.toString(messages));
+
 				ChatListener.notifyChanges(
 					this,
 					channel,
@@ -424,7 +498,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 		}
 	}
 
-	@Override public void sendMonitoringMessage(String message, UUID playerId)
+	@Override public void sendMonitoringMessage(UUID playerId, String... messages)
 	{
 		String channelId = MONITORING_CHANNEL_ID_PREFIX + playerId.toString();
 
@@ -434,7 +508,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 
 			if (channel != null)
 			{
-				channel.addMessage(message, playerId);
+				channel.addMessage(playerId, Arrays.toString(messages));
 				ChatListener.notifyChanges(
 					this,
 					channel,

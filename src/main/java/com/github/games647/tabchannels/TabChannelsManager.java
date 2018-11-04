@@ -12,6 +12,7 @@ public interface TabChannelsManager
 	List<String> getChannelIds();
 	boolean hasChannel(String channelName);
 	Channel getChannel(String id);
+	void createComponentChannel(String channelName, String channelId, boolean isPrivate, boolean isGroup);
 	void createChannel(String channelName, String channelId, boolean isPrivate, boolean isGroup);
 	String joinChannel(String channelName, UUID playerId, boolean isPrivate, boolean isGroup);
 	void leaveChannel(String channelName, UUID playerId);
@@ -20,17 +21,17 @@ public interface TabChannelsManager
 	void createMonitoringChannel(String channelName, UUID playerId);
 	void leaveMonitoringChannel(UUID playerId);
 	boolean isMonitoringChannel(String channelId);
-	void sendMonitoringMessage(String message, UUID playerId);
+	void sendMonitoringMessage(UUID playerId, String... message);
 	void sendMonitoringComponent(UUID playerId, BaseComponent... components);
 
 	void subscribe(UUID playerId, String channelName);
 	Subscriber getSubscriber(UUID playerId);
 	boolean hasSubscriber(UUID playerId);
-	void sendMessage(String message, String channelName);
-	void sendMessage(String message, String channelId, UUID playerId);
-	void broadcastMessage(String message, String channelName);
+	void sendMessage(String channelId, String... messages);
+	void sendMessage(String channelId, UUID playerId, String... messages);
+	void broadcastMessage(String channelId, String... messages);
 
-	void sendComponent(String channelName, BaseComponent... components);
+	void sendComponent(String channelId, BaseComponent... components);
 	void sendComponent(String channelId, UUID playerId, BaseComponent... components);
-	void broadcastComponent(String channelName, BaseComponent... components);
+	void broadcastComponent(String channelId, BaseComponent... components);
 }

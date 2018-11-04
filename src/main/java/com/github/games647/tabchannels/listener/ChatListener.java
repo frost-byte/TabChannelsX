@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Sets;
+import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -47,6 +48,9 @@ public class ChatListener implements Listener {
 		Subscriber subscriber = plugin.getSubscriber(senderId);
 		Channel messageChannel = plugin.getChannel(subscriber.getCurrentChannel());
 
+		if (!chatMessage.endsWith("\n"))
+			chatMessage += "\n";
+
 		addMessages(messageChannel, chatMessage, recipientIds, senderId);
 
 		//remove the recipients from normal chats without hiding log messages
@@ -63,14 +67,14 @@ public class ChatListener implements Listener {
 		{
 			ComponentChannel componentChannel = (ComponentChannel)channel;
 			componentChannel.addMessages(
-				TextComponent.fromLegacyText(message),
-				recipientIds
+				recipientIds,
+				TextComponent.fromLegacyText(message)
 			);
 		}
 		else if (channel instanceof TextChannel)
 		{
 			TextChannel textChannel = (TextChannel)channel;
-			textChannel.addMessages(message, recipientIds);
+			textChannel.addMessages(recipientIds, message);
 		}
 		else
 			return;
@@ -90,14 +94,14 @@ public class ChatListener implements Listener {
 			{
 				ComponentChannel componentChannel = (ComponentChannel)channel;
 				componentChannel.addMessage(
-					TextComponent.fromLegacyText(message),
-					recipientId
+					recipientId,
+					TextComponent.fromLegacyText(message)
 				);
 			}
 			else if (channel instanceof TextChannel)
 			{
 				TextChannel textChannel = (TextChannel)channel;
-				textChannel.addMessage(message, recipientId);
+				textChannel.addMessage(recipientId, message);
 			}
 			else
 				continue;
@@ -164,9 +168,10 @@ public class ChatListener implements Listener {
 
 		if (usedChannel != null && recipientPlayer != null && recipientPlayer.isOnline())
 		{
+			BaseComponent[] content = usedChannel.getContent(recipient);
 			Subscriber subscriber = plugin.getSubscriber(recipient);
 			recipientPlayer.spigot().sendMessage(usedChannel.getHeader(usedChannel.getChannelName()));
-			recipientPlayer.spigot().sendMessage(usedChannel.getContent(recipient));
+			recipientPlayer.spigot().sendMessage(content);
 			recipientPlayer.spigot().sendMessage(subscriber.getChannelSelection());
 		}
 	}

@@ -16,7 +16,7 @@
     </description>
 
     <properties>
-        <paper.version>1.13.1-R0.1-SNAPSHOT</paper.version>
+        <paper.version>1.13.2-R0.1-SNAPSHOT</paper.version>
         <packetwrapper.version>1.13-R0.1-SNAPSHOT</packetwrapper.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!--Possibility to deploy directly to the plugins folder-->
