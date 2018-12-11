@@ -1,14 +1,24 @@
 package com.github.games647.tabchannels.listener;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.events.ListenerPriority;
+import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.github.games647.tabchannels.*;
 
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.google.common.collect.Sets;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.chat.ComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Entity;
@@ -20,6 +30,8 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import static com.github.games647.tabchannels.TabChannels.MESSAGE_TAG;
+
 @SuppressWarnings( { "unused", "WeakerAccess" })
 public class ChatListener implements Listener {
 
@@ -27,6 +39,73 @@ public class ChatListener implements Listener {
 
 	public ChatListener(TabChannels plugin) {
 		this.plugin = plugin;
+		AtomicReference<TabChannels> pluginRef = new AtomicReference<>(plugin);
+		plugin.getProtocolManager().addPacketListener(
+			new PacketAdapter(
+				plugin,
+				ListenerPriority.HIGH,
+				PacketType.Play.Server.CHAT
+
+			) {
+				@Override public void onPacketSending(PacketEvent event)
+				{
+					Player player = event.getPlayer();
+					UUID playerId = player.getUniqueId();
+					PacketType packetType = event.getPacketType();
+
+					if (packetType != PacketType.Play.Server.CHAT)
+						return;
+
+					Subscriber subscriber = pluginRef.get().getSubscriber(playerId);
+
+					PacketContainer packet = event.getPacket();
+					StructureModifier<WrappedChatComponent> chatComponents = packet.getChatComponents();
+
+					if (chatComponents == null)
+						return;
+
+					WrappedChatComponent component = chatComponents.read(0);
+
+					if (component == null)
+						return;
+
+					String message = component.getJson();
+
+					if (message.startsWith(MESSAGE_TAG))
+					{
+						message = message.replaceFirst(MESSAGE_TAG, "");
+						component.setJson(message);
+						chatComponents.write(0, component);
+						super.onPacketSending(event);
+
+						return;
+					}
+
+					Channel channel = pluginRef.get().getChannel("global");
+					Set<Channel> channels = Stream.of(channel).collect(Collectors.toSet());
+
+					try
+					{
+						BaseComponent[] output = ComponentSerializer.parse(message);
+						if (output != null && output.length > 0)
+							message = BaseComponent.toLegacyText(output);
+						if (!message.endsWith("\n"))
+							message += "\n";
+					}
+					catch (Exception ex)
+					{
+						return;
+					}
+
+					addMessage(
+						channels,
+						message,
+						player.getUniqueId()
+					);
+					event.setCancelled(true);
+				}
+			}
+		);
 	}
 
 	//listen to the highest priority in order to let other plugins interpret it as successful event
@@ -42,8 +121,14 @@ public class ChatListener implements Listener {
 			.collect(Collectors.toSet());
 
 		String message = playerChatEvent.getMessage();
+		if (message == null || message.isEmpty())
+			return;
+
 		String format = playerChatEvent.getFormat();
 		String chatMessage = String.format(format, sender.getDisplayName(), message);
+
+		if (chatMessage == null || chatMessage.isEmpty())
+			return;
 
 		Subscriber subscriber = plugin.getSubscriber(senderId);
 		Channel messageChannel = plugin.getChannel(subscriber.getCurrentChannel());
@@ -60,7 +145,8 @@ public class ChatListener implements Listener {
 	private void addMessages(
 		Channel channel,
 		String message,
-		Set<UUID> recipientIds,UUID senderId
+		Set<UUID> recipientIds,
+		UUID senderId
 	)
 	{
 		if (channel instanceof ComponentChannel)

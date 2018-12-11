@@ -106,7 +106,7 @@ public class Subscriber {
 		if (plugin.isMonitoringChannel(currentChannelId))
 			newName = "Monitor";
 
-		String currentLine = " " + StringUtils.capitalize(newName);
+		String currentLine = StringUtils.capitalize(newName);
 		ComponentBuilder builder = new ComponentBuilder(currentLine).bold(true).color(GREEN);
 
 		for (Map.Entry<String, MutableInt> entry : unreadChannels.entrySet()) {

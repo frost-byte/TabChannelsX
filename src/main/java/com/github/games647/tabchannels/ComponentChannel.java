@@ -1,20 +1,22 @@
 package com.github.games647.tabchannels;
 
-
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 
-import org.bukkit.util.ChatPaginator;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static net.md_5.bungee.api.ChatColor.GOLD;
+
 import static net.md_5.bungee.api.chat.BaseComponent.toPlainText;
 import static net.md_5.bungee.api.chat.ComponentBuilder.FormatRetention.*;
 import static org.apache.commons.lang.StringUtils.repeat;
 import static org.bukkit.util.ChatPaginator.AVERAGE_CHAT_PAGE_WIDTH;
 import static org.bukkit.util.ChatPaginator.GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH;
+import static org.bukkit.util.ChatPaginator.wordWrap;
 
 @SuppressWarnings("unused")
 public class ComponentChannel extends Channel<BaseComponent>
@@ -59,26 +61,51 @@ public class ComponentChannel extends Channel<BaseComponent>
 		return numComponentLines(history);
 	}
 
-	@SuppressWarnings("Convert2MethodRef")
+
 	private int numComponentLines(List<BaseComponent> components)
 	{
-		String combined = components.stream()
-			.map(c -> toPlainText(c))
-			.collect(Collectors.joining());
+		components = checkNotNull(components, "The Components cannot be null!");
+
+		if (components == null)
+			return 0;
+
+		StringBuilder sb = new StringBuilder();
+
+		for (BaseComponent component : components)
+		{
+			if (component == null)
+				continue;
+			String s = toPlainText(component);
+			sb.append(s);
+		}
+
+		String combined = sb.toString();
 
 		// Note: Unfortunately, due to the users
 		// each potentially using resource packs with different fonts
 		// the number of characters per line in their Chat Pages can vary
 		// significantly.
-		return ChatPaginator.wordWrap(
+		return wordWrap(
 			combined,
+			AVERAGE_CHAT_PAGE_WIDTH
+		).length;
+	}
+
+	private int numComponentLines(BaseComponent... components)
+	{
+		components = checkNotNull(components, "The Components cannot be null!");
+
+		String plainText = toPlainText(components);
+
+		return wordWrap(
+			plainText,
 			AVERAGE_CHAT_PAGE_WIDTH
 		).length;
 	}
 
 	private int numComponentLines(BaseComponent component)
 	{
-		return ChatPaginator.wordWrap(
+		return wordWrap(
 			component.toPlainText(),
 			AVERAGE_CHAT_PAGE_WIDTH
 		).length;
@@ -117,19 +144,33 @@ public class ComponentChannel extends Channel<BaseComponent>
 		if (messages == null || messages.length == 0)
 			return;
 
-		List<BaseComponent> componentList = Arrays.asList(messages);
-		int messageLength = numComponentLines(componentList);
-		for (UUID recipientId : recipientIds)
+		int numLines = numComponentLines(messages);
+
+		if (numLines > 0)
 		{
-			removeOverflow(recipientId, messageLength);
-			List<BaseComponent> history = getChatHistory(recipientId);
+			int messagesLength = messages.length;
+			int i = 0;
 
-			history.addAll(componentList);
+			for (; i < messagesLength; i++)
+			{
+				BaseComponent message = messages[i];
 
-			chatMap.put(
-				recipientId,
-				history
-			);
+				for (UUID recipientId : recipientIds)
+				{
+					removeOverflow(
+						recipientId,
+						numLines
+					);
+					List<BaseComponent> history = getChatHistory(recipientId);
+
+					history.add(message);
+
+					chatMap.put(
+						recipientId,
+						history
+					);
+				}
+			}
 		}
 	}
 
@@ -138,22 +179,33 @@ public class ComponentChannel extends Channel<BaseComponent>
 		if (messages == null || messages.length == 0)
 			return;
 
-		List<BaseComponent> componentList = Arrays.asList(messages);
-		removeOverflow(recipientId, numComponentLines(componentList));
+		int numLines = numComponentLines(messages);
 
-		List<BaseComponent> history = getChatHistory(recipientId);
-		history.addAll(componentList);
+		if (numLines > 0)
+		{
+			removeOverflow(
+				recipientId,
+				numLines
+			);
 
-		// This was meant to split the input message that was in text
-		// into multiple lines. The 0 slot in the array was added
-		// before the loop, then a space was added between
-		// each of the other lines.
-//		for (int i = 1; i < linesToAdd.length; i++) {
-//			String messagePart = ' ' + linesToAdd[i];
-//			history.add(messagePart);
-//		}
+			List<BaseComponent> history = getChatHistory(recipientId);
+			int messagesLength = messages.length;
+			int i = 0;
 
-		chatMap.put(recipientId, history);
+			for (; i < messagesLength; i++)
+			{
+				ComponentBuilder builder = new ComponentBuilder("");
+				BaseComponent message = messages[i];
+
+				if (message != null)
+					history.add(message);
+			}
+
+			chatMap.put(
+				recipientId,
+				history
+			);
+		}
 	}
 
 	@Override

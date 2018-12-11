@@ -24,7 +24,6 @@ public abstract class Channel<T>
 	//-1 Header line -2 Chat channel selection
 	protected static final int QUEUE_SIZE = ChatPaginator.OPEN_CHAT_PAGE_HEIGHT - 1 - 2;
 
-
 	protected final String id;
 	protected final String channelName;
 	protected final boolean privateChannel;
@@ -64,12 +63,11 @@ public abstract class Channel<T>
 	public boolean isGroup() { return groupChannel; }
 	public boolean isPrivate() { return privateChannel; }
 
-
 	@SuppressWarnings("unused")
 	public String getChannelName() { return channelName; }
 
-	public String getName(UUID self) {
-
+	public String getName(UUID self)
+	{
 		// If a uuid is specified, find a matching recipient (for private messaging)
 		// For each private conversation, a tab would appear using the recipient's channelName
 		if (self != null && privateChannel) {
@@ -85,8 +83,8 @@ public abstract class Channel<T>
 		return channelName;
 	}
 
-	public BaseComponent[] getHeader(String headerName) {
-
+	public BaseComponent[] getHeader(String headerName)
+	{
 		String title = ' ' + headerName + ' ';
 		String center = StringUtils.center(
 			title,
@@ -105,17 +103,20 @@ public abstract class Channel<T>
 		return chatMap.containsKey(playerId);
 	}
 
-	public void addRecipient(UUID playerId) {
+	public void addRecipient(UUID playerId)
+	{
 		if (!chatMap.containsKey(playerId))
 			chatMap.put(playerId, Lists.newArrayListWithExpectedSize(QUEUE_SIZE));
 	}
 
-	public void removeRecipient(UUID playerId) {
+	public void removeRecipient(UUID playerId)
+	{
 		if (chatMap.containsKey(playerId))
 			chatMap.remove(playerId);
 	}
 
-	public List<UUID> getRecipients() {
+	public List<UUID> getRecipients()
+	{
 		return new ArrayList<>(chatMap.keySet());
 	}
 

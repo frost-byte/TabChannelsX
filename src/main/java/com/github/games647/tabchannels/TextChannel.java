@@ -147,6 +147,7 @@ public class TextChannel extends Channel<String>
 		if (history == null)
 			return null;
 
+		emptyLineBuilder.append("");
 		for (int i = QUEUE_SIZE - history.size(); i > 0; i--) {
 			emptyLineBuilder.append("\n");
 		}

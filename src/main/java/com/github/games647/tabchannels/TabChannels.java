@@ -1,5 +1,7 @@
 package com.github.games647.tabchannels;
 
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
 import com.github.games647.tabchannels.commands.ChannelCommand;
 import com.github.games647.tabchannels.commands.CreateCommand;
 import com.github.games647.tabchannels.commands.PrivateCommand;
@@ -26,6 +28,7 @@ import static org.bukkit.ChatColor.DARK_RED;
 
 public class TabChannels extends JavaPlugin implements TabChannelsManager
 {
+	public static String MESSAGE_TAG = "##";
 	private final Map<UUID, Subscriber> subscribers = new ConcurrentHashMap<>();
 
 	/**
@@ -35,6 +38,9 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 
 	private final ComponentChannel globalChannel = new ComponentChannel("global", false);
 	private final String MONITORING_CHANNEL_ID_PREFIX = "mon_";
+
+	private ProtocolManager protocolManager;
+
 
 	@SuppressWarnings("FieldCanBeLocal")
 	private final String MONITORING_CHANNEL_NAME = "Monitor";
@@ -46,6 +52,8 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 		getCommand("switchchannel").setExecutor(new SwitchCommand(this));
 		getCommand("private").setExecutor(new PrivateCommand(this));
 		getCommand("createchannel").setExecutor(new CreateCommand(this));
+
+		protocolManager = ProtocolLibrary.getProtocolManager();
 
 		//register listeners
 		PluginManager pm  = Bukkit.getPluginManager();
@@ -95,6 +103,11 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 			sender.spigot().sendMessage(channel.getContent(senderId));
 			sender.spigot().sendMessage(selfSubscriber.getChannelSelection());
 		}
+	}
+
+	public ProtocolManager getProtocolManager()
+	{
+		return protocolManager;
 	}
 
 	@Override
