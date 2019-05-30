@@ -3,20 +3,22 @@
     <modelVersion>4.0.0</modelVersion>
 
     <name>TabChannels</name>
-    <!--This has to be in lowercase because it's used by plugin.yml-->
+    <!--This has to be in lowercase because it's used by plugin.yml -->
     <groupId>com.github.games647</groupId>
     <artifactId>tabchannels</artifactId>
-    <version>0.4</version>
+    <version>0.5</version>
     <packaging>jar</packaging>
 
     <inceptionYear>2015</inceptionYear>
+    <!-- consider changing this? -->
     <url>http://dev.bukkit.org/bukkit-plugins/tabchannels/</url>
     <description>
         Easy chat channels for your minecraft players
     </description>
 
     <properties>
-        <paper.version>1.13.2-R0.1-SNAPSHOT</paper.version>
+        <paper.version>1.14.2-R0.1-SNAPSHOT</paper.version>
+        <protocol.version>4.4.0</protocol.version>
         <packetwrapper.version>1.13-R0.1-SNAPSHOT</packetwrapper.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!--Possibility to deploy directly to the plugins folder-->
@@ -25,13 +27,13 @@
 
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/games647/TabChannels/issues</url>
+        <url>https://github.com/frost-byte/TabChannels/issues</url>
     </issueManagement>
 
     <scm>
-        <url>https://github.com/games647/TabChannels</url>
-        <connection>scm:git:git://github.com/games647/TabChannels.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com:games647/TabChannels.git</developerConnection>
+        <url>https://github.com/frost-byte/TabChannels</url>
+        <connection>scm:git:git://github.com/frost-byte/TabChannels.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com:frost-byte/TabChannels.git</developerConnection>
     </scm>
 
     <build>
@@ -141,7 +143,7 @@
         <dependency>
             <groupId>com.comphenix.protocol</groupId>
             <artifactId>ProtocolLib-API</artifactId>
-            <version>4.4.0</version>
+            <version>${protocol.version}</version>
         </dependency>
         <dependency>
             <groupId>com.comphenix.packetwrapper</groupId>

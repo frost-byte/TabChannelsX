@@ -47,7 +47,8 @@ public class ChatListener implements Listener {
 				PacketType.Play.Server.CHAT
 
 			) {
-				@Override public void onPacketSending(PacketEvent event)
+				@Override
+				public void onPacketSending(PacketEvent event)
 				{
 					Player player = event.getPlayer();
 					UUID playerId = player.getUniqueId();
@@ -121,7 +122,7 @@ public class ChatListener implements Listener {
 			.collect(Collectors.toSet());
 
 		String message = playerChatEvent.getMessage();
-		if (message == null || message.isEmpty())
+		if (message.isEmpty())
 			return;
 
 		String format = playerChatEvent.getFormat();
@@ -196,6 +197,7 @@ public class ChatListener implements Listener {
 		}
 	}
 
+	@SuppressWarnings("ConstantConditions")
 	@EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
 	public void onJoin(PlayerJoinEvent joinEvent) {
 		Player player = joinEvent.getPlayer();
@@ -211,6 +213,7 @@ public class ChatListener implements Listener {
 		}
 	}
 
+	@SuppressWarnings("ConstantConditions")
 	@EventHandler(priority = EventPriority.HIGH)
 	public void onQuit(PlayerQuitEvent quitEvent) {
 		Player player = quitEvent.getPlayer();

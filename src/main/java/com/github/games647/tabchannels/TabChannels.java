@@ -9,6 +9,8 @@ import com.github.games647.tabchannels.commands.SwitchCommand;
 import com.github.games647.tabchannels.listener.ChatListener;
 import com.github.games647.tabchannels.listener.SubscriptionListener;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -18,6 +20,8 @@ import net.md_5.bungee.api.chat.BaseComponent;
 
 import org.bukkit.Bukkit;
 
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.ServicePriority;
@@ -31,6 +35,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	public static String MESSAGE_TAG = "##";
 	private final Map<UUID, Subscriber> subscribers = new ConcurrentHashMap<>();
 
+	// TODO: Figure out how to maintain the proper display of Advancements/tooltips
 	/**
 	 * Map of Channel Ids to their Channel
 	 */
@@ -42,16 +47,23 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	private ProtocolManager protocolManager;
 
 
-	@SuppressWarnings("FieldCanBeLocal")
+	@SuppressWarnings( { "FieldCanBeLocal", "unused" })
 	private final String MONITORING_CHANNEL_NAME = "Monitor";
 
 	@Override
 	public void onEnable() {
 		//register commands
-		getCommand(this.getName().toLowerCase()).setExecutor(new ChannelCommand(this));
-		getCommand("switchchannel").setExecutor(new SwitchCommand(this));
-		getCommand("private").setExecutor(new PrivateCommand(this));
-		getCommand("createchannel").setExecutor(new CreateCommand(this));
+		try
+		{
+			registerCommand(this.getName().toLowerCase(), ChannelCommand.class);
+			registerCommand("switchchannel", SwitchCommand.class);
+			registerCommand("private", PrivateCommand.class);
+			registerCommand("createchannel", CreateCommand.class);
+		}
+		catch (NoSuchMethodException e)
+		{
+			e.printStackTrace();
+		}
 
 		protocolManager = ProtocolLibrary.getProtocolManager();
 
@@ -76,6 +88,29 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 		//load all players if the server is already started like in a reload
 		Bukkit.getOnlinePlayers()
 			.forEach(this::loadPlayer);
+	}
+
+	private void registerCommand(String commandName, Class<? extends CommandExecutor> clazz)
+		throws NoSuchMethodException {
+
+		PluginCommand command = getCommand(commandName);
+
+		try {
+			Constructor ctor = clazz.getDeclaredConstructor(TabChannels.class);
+			CommandExecutor executor = (CommandExecutor)ctor.newInstance(this);
+
+			if (command != null)
+				command.setExecutor(executor);
+			else
+				throw new NullPointerException();
+		}
+		catch (
+			IllegalAccessException |
+			InstantiationException |
+			InvocationTargetException e
+		) {
+			e.printStackTrace();
+		}
 	}
 
 	public void switchChannel(Player sender, String channelId)
@@ -252,7 +287,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 
 		if (!getChannels().containsKey(channelName))
 		{
-			Channel newChannel = new TextChannel(
+			Channel newChannel = new ComponentChannel(
 				channelId,
 				channelName,
 				true,
@@ -282,11 +317,9 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 			subscriber = subscribers.get(playerId);
 
 		if (!channels.containsKey(channelId))
-			createChannel(
+			createMonitoringChannel(
 				channelId,
-				MONITORING_CHANNEL_NAME,
-				true,
-				false
+				playerId
 			);
 
 		channel = channels.get(channelId);
@@ -534,6 +567,30 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	@Override public void sendMonitoringComponent(UUID playerId, BaseComponent... components)
 	{
 
+		playerId = checkNotNull(
+			playerId,
+			"The Player Id must not be null."
+		);
+		components = checkNotNull(
+			components,
+			"The base components cannot be null."
+		);
+		String channelId = MONITORING_CHANNEL_ID_PREFIX + playerId.toString();
+
+		if (hasChannel(channelId) && hasSubscriber(playerId))
+		{
+			ComponentChannel channel = (ComponentChannel)channels.getOrDefault(channelId, null);
+
+			if (channel != null)
+			{
+				channel.addMessage(playerId, components);
+				ChatListener.notifyChanges(
+					this,
+					channel,
+					Sets.newHashSet(channel.getRecipients())
+				);
+			}
+		}
 	}
 
 	@Override public Subscriber getSubscriber(UUID playerId)
