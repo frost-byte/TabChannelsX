@@ -463,7 +463,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	@Override public void sendComponent(String channelId, BaseComponent... components)
 	{
 		channelId = checkNotNull(channelId, "The Channel Id must not be null.");
-		components = checkNotNull(components, "The base components cannot be null.");
+		checkNotNull(components, "The base components cannot be null.");
 
 		if (hasChannel(channelId))
 		{
@@ -488,13 +488,13 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 			channelId,
 			"The Channel Id must not be null."
 		);
-		playerId = checkNotNull(
-			playerId,
-			"The Player Id must not be null."
+		checkNotNull(
+				playerId,
+				"The Player Id must not be null."
 		);
-		components = checkNotNull(
-			components,
-			"The base components cannot be null."
+		checkNotNull(
+				components,
+				"The base components cannot be null."
 		);
 
 		if (hasChannel(channelId))
@@ -517,7 +517,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	@Override public void broadcastComponent(String channelId, BaseComponent... components)
 	{
 		channelId = checkNotNull(channelId, "The Channel Id must not be null.");
-		components = checkNotNull(components, "The base components cannot be null.");
+		checkNotNull(components, "The base components cannot be null.");
 
 		sendComponent(channelId, components);
 	}
@@ -567,13 +567,13 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	@Override public void sendMonitoringComponent(UUID playerId, BaseComponent... components)
 	{
 
-		playerId = checkNotNull(
-			playerId,
-			"The Player Id must not be null."
+		checkNotNull(
+				playerId,
+				"The Player Id must not be null."
 		);
-		components = checkNotNull(
-			components,
-			"The base components cannot be null."
+		checkNotNull(
+				components,
+				"The base components cannot be null."
 		);
 		String channelId = MONITORING_CHANNEL_ID_PREFIX + playerId.toString();
 

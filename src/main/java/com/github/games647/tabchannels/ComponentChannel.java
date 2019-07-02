@@ -1,5 +1,7 @@
 package com.github.games647.tabchannels;
 
+import com.github.games647.tabchannels.util.ComponentUtil;
+import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 
@@ -62,9 +64,10 @@ public class ComponentChannel extends Channel<BaseComponent>
 	}
 
 
+	@SuppressWarnings("ConstantConditions")
 	private int numComponentLines(List<BaseComponent> components)
 	{
-		components = checkNotNull(components, "The Components cannot be null!");
+		checkNotNull(components, "The Components cannot be null!");
 
 		if (components == null)
 			return 0;
@@ -93,7 +96,7 @@ public class ComponentChannel extends Channel<BaseComponent>
 
 	private int numComponentLines(BaseComponent... components)
 	{
-		components = checkNotNull(components, "The Components cannot be null!");
+		checkNotNull(components, "The Components cannot be null!");
 
 		String plainText = toPlainText(components);
 
@@ -154,6 +157,11 @@ public class ComponentChannel extends Channel<BaseComponent>
 			for (; i < messagesLength; i++)
 			{
 				BaseComponent message = messages[i];
+				if (i > 0) {
+					BaseComponent last = messages[i - 1];
+					ChatColor previous = ComponentUtil.findLastDecorator(last);
+					message.setColor(previous);
+				}
 
 				for (UUID recipientId : recipientIds)
 				{
@@ -162,7 +170,6 @@ public class ComponentChannel extends Channel<BaseComponent>
 						numLines
 					);
 					List<BaseComponent> history = getChatHistory(recipientId);
-
 					history.add(message);
 
 					chatMap.put(

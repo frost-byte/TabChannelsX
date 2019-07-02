@@ -14,6 +14,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 
+@SuppressWarnings("NullableProblems")
 public class SwitchCommand implements TabExecutor {
 
 	private final TabChannels plugin;
@@ -43,7 +44,12 @@ public class SwitchCommand implements TabExecutor {
 	}
 
 	@Override
-	public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+	public List<String> onTabComplete(
+		CommandSender sender,
+		Command command,
+		String alias,
+		String[] args
+	) {
 		if (sender instanceof Player) {
 			Player player = (Player) sender;
 			UUID senderId = player.getUniqueId();
