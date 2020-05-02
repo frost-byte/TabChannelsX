@@ -1,4 +1,4 @@
-package com.github.games647.tabchannels.listener;
+package net.frostbyte.tabchannelsx.listener;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.ListenerPriority;
@@ -7,7 +7,6 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
-import com.github.games647.tabchannels.*;
 
 import java.util.Set;
 import java.util.UUID;
@@ -16,6 +15,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.collect.Sets;
+import net.frostbyte.tabchannelsx.Channel;
+import net.frostbyte.tabchannelsx.ComponentChannel;
+import net.frostbyte.tabchannelsx.Subscriber;
+import net.frostbyte.tabchannelsx.TabChannelsX;
+import net.frostbyte.tabchannelsx.TextChannel;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.chat.ComponentSerializer;
@@ -30,16 +34,14 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import static com.github.games647.tabchannels.TabChannels.MESSAGE_TAG;
-
 @SuppressWarnings( { "unused", "WeakerAccess" })
 public class ChatListener implements Listener {
 
-	private final TabChannels plugin;
+	private final TabChannelsX plugin;
 
-	public ChatListener(TabChannels plugin) {
+	public ChatListener(TabChannelsX plugin) {
 		this.plugin = plugin;
-		AtomicReference<TabChannels> pluginRef = new AtomicReference<>(plugin);
+		AtomicReference<TabChannelsX> pluginRef = new AtomicReference<>(plugin);
 		plugin.getProtocolManager().addPacketListener(
 			new PacketAdapter(
 				plugin,
@@ -72,9 +74,9 @@ public class ChatListener implements Listener {
 
 					String message = component.getJson();
 
-					if (message.startsWith(MESSAGE_TAG))
+					if (message.startsWith(TabChannelsX.MESSAGE_TAG))
 					{
-						message = message.replaceFirst(MESSAGE_TAG, "");
+						message = message.replaceFirst(TabChannelsX.MESSAGE_TAG, "");
 						component.setJson(message);
 						chatComponents.write(0, component);
 						super.onPacketSending(event);
@@ -82,8 +84,8 @@ public class ChatListener implements Listener {
 						return;
 					}
 
-					Channel channel = pluginRef.get().getChannel("global");
-					Set<Channel> channels = Stream.of(channel).collect(Collectors.toSet());
+					Channel<?> channel = pluginRef.get().getChannel("global");
+					Set<Channel<?>> channels = Stream.of(channel).collect(Collectors.toSet());
 
 					try
 					{
@@ -132,7 +134,7 @@ public class ChatListener implements Listener {
 			return;
 
 		Subscriber subscriber = plugin.getSubscriber(senderId);
-		Channel messageChannel = plugin.getChannel(subscriber.getCurrentChannel());
+		Channel<?> messageChannel = plugin.getChannel(subscriber.getCurrentChannel());
 
 		if (!chatMessage.endsWith("\n"))
 			chatMessage += "\n";
@@ -144,7 +146,7 @@ public class ChatListener implements Listener {
 	}
 
 	private void addMessages(
-		Channel channel,
+		Channel<?> channel,
 		String message,
 		Set<UUID> recipientIds,
 		UUID senderId
@@ -170,12 +172,12 @@ public class ChatListener implements Listener {
 	}
 
 	private void addMessage(
-		Set<Channel> channels,
+		Set<Channel<?>> channels,
 		String message,
 		UUID recipientId
 	)
 	{
-		for (Channel channel : channels) {
+		for (Channel<?> channel : channels) {
 
 			if (channel instanceof ComponentChannel)
 			{
@@ -197,7 +199,6 @@ public class ChatListener implements Listener {
 		}
 	}
 
-	@SuppressWarnings("ConstantConditions")
 	@EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
 	public void onJoin(PlayerJoinEvent joinEvent) {
 		Player player = joinEvent.getPlayer();
@@ -206,14 +207,13 @@ public class ChatListener implements Listener {
 
 		if (joinMessage != null && !joinMessage.isEmpty()) {
 			Subscriber subscriber = plugin.getSubscriber(playerId);
-			Set<Channel> channels = plugin.getSubscribedChannels(playerId);
+			Set<Channel<?>> channels = plugin.getSubscribedChannels(playerId);
 
 			addMessage(channels, joinMessage, playerId);
 			joinEvent.setJoinMessage("");
 		}
 	}
 
-	@SuppressWarnings("ConstantConditions")
 	@EventHandler(priority = EventPriority.HIGH)
 	public void onQuit(PlayerQuitEvent quitEvent) {
 		Player player = quitEvent.getPlayer();
@@ -222,7 +222,7 @@ public class ChatListener implements Listener {
 
 		if (quitMessage != null && !quitMessage.isEmpty()) {
 			Subscriber subscriber = plugin.getSubscriber(playerId);
-			Set<Channel> channels = plugin.getSubscribedChannels(playerId);
+			Set<Channel<?>> channels = plugin.getSubscribedChannels(playerId);
 
 			addMessage(channels, quitMessage, playerId);
 			quitEvent.setQuitMessage("");
@@ -230,8 +230,8 @@ public class ChatListener implements Listener {
 	}
 
 	public static void notifyChanges(
-		TabChannels plugin,
-		Channel messageChannel,
+		TabChannelsX plugin,
+		Channel<?> messageChannel,
 		Set<UUID> recipientIds
 	) {
 		if (messageChannel == null || recipientIds == null || recipientIds.isEmpty())
@@ -249,11 +249,16 @@ public class ChatListener implements Listener {
 		}
 	}
 
-	public static void onNewMessage(TabChannels plugin, UUID recipient, Subscriber receiver, Channel messageChannel) {
+	public static void onNewMessage(
+		TabChannelsX plugin,
+		UUID recipient,
+		Subscriber receiver,
+		Channel<?> messageChannel
+	) {
 		Player recipientPlayer = Bukkit.getPlayer(recipient);
 
 		receiver.notifyNewMessage(messageChannel);
-		Channel usedChannel = plugin.getChannel(receiver.getCurrentChannel());
+		Channel<?> usedChannel = plugin.getChannel(receiver.getCurrentChannel());
 
 		if (usedChannel != null && recipientPlayer != null && recipientPlayer.isOnline())
 		{

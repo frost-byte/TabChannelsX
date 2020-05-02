@@ -1,17 +1,23 @@
-package com.github.games647.tabchannels;
+package net.frostbyte.tabchannelsx;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
-import com.github.games647.tabchannels.commands.ChannelCommand;
-import com.github.games647.tabchannels.commands.CreateCommand;
-import com.github.games647.tabchannels.commands.PrivateCommand;
-import com.github.games647.tabchannels.commands.SwitchCommand;
-import com.github.games647.tabchannels.listener.ChatListener;
-import com.github.games647.tabchannels.listener.SubscriptionListener;
+import net.frostbyte.tabchannelsx.commands.ChannelCommand;
+import net.frostbyte.tabchannelsx.commands.CreateCommand;
+import net.frostbyte.tabchannelsx.commands.PrivateCommand;
+import net.frostbyte.tabchannelsx.commands.SwitchCommand;
+import net.frostbyte.tabchannelsx.listener.ChatListener;
+import net.frostbyte.tabchannelsx.listener.SubscriptionListener;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -30,7 +36,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.bukkit.ChatColor.DARK_RED;
 
-public class TabChannels extends JavaPlugin implements TabChannelsManager
+public class TabChannelsX extends JavaPlugin implements TabChannelsManager
 {
 	public static String MESSAGE_TAG = "##";
 	private final Map<UUID, Subscriber> subscribers = new ConcurrentHashMap<>();
@@ -96,7 +102,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 		PluginCommand command = getCommand(commandName);
 
 		try {
-			Constructor ctor = clazz.getDeclaredConstructor(TabChannels.class);
+			Constructor<?> ctor = clazz.getDeclaredConstructor(TabChannelsX.class);
 			CommandExecutor executor = (CommandExecutor)ctor.newInstance(this);
 
 			if (command != null)
@@ -121,7 +127,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 			return;
 
 		Subscriber selfSubscriber = subscribers.get(senderId);
-		Channel channel = channels.get(channelId);
+		Channel<?> channel = channels.get(channelId);
 
 
 		if (channel == null) {
@@ -156,7 +162,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	}
 
 	@Override
-	public Channel getChannel(String id)
+	public Channel<?> getChannel(String id)
 	{
 		return channels.getOrDefault(id, null);
 	}
@@ -170,7 +176,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	){
 		if (!getChannels().containsKey(channelName))
 		{
-			Channel newChannel = new ComponentChannel(
+			Channel<?> newChannel = new ComponentChannel(
 				channelId,
 				channelName,
 				isPrivate,
@@ -184,18 +190,13 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	}
 
 	@SuppressWarnings("unused")
-	public Channel getChannelByName(String channelName)
+	public Channel<?> getChannelByName(String channelName)
 	{
-	   Channel channel = channels.values()
-			.stream()
-			.filter(c -> c.getName(null).equalsIgnoreCase(channelName))
-			.findFirst()
-			.orElse(null);
-
-		if (channel != null)
-			return channel;
-
-		return null;
+		return channels.values()
+			 .stream()
+			 .filter(c -> c.getName(null).equalsIgnoreCase(channelName))
+			 .findFirst()
+			 .orElse(null);
 	}
 
 	public Map<String, Channel<?>> getChannels() {
@@ -203,7 +204,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	}
 
 	@SuppressWarnings("unused")
-	public Channel getGlobalChannel() {
+	public Channel<?> getGlobalChannel() {
 		return globalChannel;
 	}
 
@@ -241,7 +242,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	{
 		if (!getChannels().containsKey(channelName))
 		{
-			Channel newChannel = new TextChannel(
+			Channel<?> newChannel = new TextChannel(
 				channelId,
 				channelName,
 				isPrivate,
@@ -273,8 +274,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 					Subscriber privateChatSubscriber = getSubscriber(chatPartner);
 					privateChatSubscriber.unsubscribe(subscription);
 
-					if (channels.containsKey(subscription.getId()))
-						channels.remove(subscription.getId());
+					channels.remove(subscription.getId());
 				}
 			}
 		}
@@ -287,7 +287,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 
 		if (!getChannels().containsKey(channelName))
 		{
-			Channel newChannel = new ComponentChannel(
+			Channel<?> newChannel = new ComponentChannel(
 				channelId,
 				channelName,
 				true,
@@ -305,7 +305,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	{
 		Subscriber subscriber;
 		String channelId = MONITORING_CHANNEL_ID_PREFIX + playerId.toString();
-		Channel channel;
+		Channel<?> channel;
 
 		if (!hasSubscriber(playerId))
 		{
@@ -350,7 +350,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 	public String joinChannel(String channelName, UUID playerId, boolean isPrivate, boolean isGroup)
 	{
 		Subscriber subscriber;
-		Channel channel;
+		Channel<?> channel;
 
 		if (!hasSubscriber(playerId))
 		{
@@ -393,10 +393,10 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 		return null;
 	}
 
-	public Set<Channel> getSubscribedChannels(UUID playerId)
+	public Set<Channel<?>> getSubscribedChannels(UUID playerId)
 	{
 		List<String> channelIds = getSubscriber(playerId).getSubscriptions();
-		Set<Channel> result = new HashSet<>();
+		Set<Channel<?>> result = new HashSet<>();
 
 		channelIds.forEach(id -> {
 			if (hasChannel(id))
@@ -414,7 +414,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 
 			if (subscriber != null && channels.containsKey(channelId))
 			{
-				Channel channel = channels.get(channelId);
+				Channel<?> channel = channels.get(channelId);
 				subscriber.unsubscribe(channel);
 			}
 		}
@@ -429,7 +429,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 
 			if (subscriber != null && channels.containsKey(channelId))
 			{
-				Channel channel = channels.get(channelId);
+				Channel<?> channel = channels.get(channelId);
 				subscriber.unsubscribe(channel);
 				channel.removeRecipient(playerId);
 				channels.remove(channelId);
@@ -634,7 +634,7 @@ public class TabChannels extends JavaPlugin implements TabChannelsManager
 		{
 			if (channels.containsKey(channelId))
 			{
-				Channel channel = channels.get(channelId);
+				Channel<?> channel = channels.get(channelId);
 				subscriber.subscribe(channel);
 			}
 		}

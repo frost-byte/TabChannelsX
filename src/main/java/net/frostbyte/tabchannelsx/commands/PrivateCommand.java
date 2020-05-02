@@ -1,12 +1,12 @@
-package com.github.games647.tabchannels.commands;
+package net.frostbyte.tabchannelsx.commands;
 
-import com.github.games647.tabchannels.Channel;
-import com.github.games647.tabchannels.Subscriber;
-import com.github.games647.tabchannels.TabChannels;
+import net.frostbyte.tabchannelsx.Channel;
+import net.frostbyte.tabchannelsx.Subscriber;
+import net.frostbyte.tabchannelsx.TabChannelsX;
 
 import java.util.UUID;
 
-import com.github.games647.tabchannels.TextChannel;
+import net.frostbyte.tabchannelsx.TextChannel;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -16,9 +16,9 @@ import org.bukkit.entity.Player;
 
 public class PrivateCommand implements CommandExecutor {
 
-	private final TabChannels plugin;
+	private final TabChannelsX plugin;
 
-	public PrivateCommand(TabChannels plugin) {
+	public PrivateCommand(TabChannelsX plugin) {
 		this.plugin = plugin;
 	}
 

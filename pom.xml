@@ -2,23 +2,23 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <name>TabChannels</name>
+    <name>TabChannelsX</name>
     <!--This has to be in lowercase because it's used by plugin.yml -->
-    <groupId>com.github.games647</groupId>
-    <artifactId>tabchannels</artifactId>
-    <version>0.5</version>
+    <groupId>net.frostbyte</groupId>
+    <artifactId>tabchannelsx</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <inceptionYear>2015</inceptionYear>
-    <!-- consider changing this? -->
-    <url>http://dev.bukkit.org/bukkit-plugins/tabchannels/</url>
+    <inceptionYear>2019</inceptionYear>
+    <url>https://github.com/frost-byte/TabChannelsX</url>
     <description>
-        Easy chat channels for your minecraft players
+        Tabbed Chat channels for Spigot
     </description>
 
     <properties>
-        <paper.version>1.14.3-R0.1-SNAPSHOT</paper.version>
-        <protocol.version>4.4.0</protocol.version>
+        <paper.version>1.15.2</paper.version>
+        <paper_api.version>1.15.2-R0.1-SNAPSHOT</paper_api.version>
+        <protocol.version>4.5.0</protocol.version>
         <packetwrapper.version>1.13-R0.1-SNAPSHOT</packetwrapper.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!--Possibility to deploy directly to the plugins folder-->
@@ -27,13 +27,13 @@
 
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/frost-byte/TabChannels/issues</url>
+        <url>https://github.com/frost-byte/TabChannelsX/issues</url>
     </issueManagement>
 
     <scm>
-        <url>https://github.com/frost-byte/TabChannels</url>
-        <connection>scm:git:git://github.com/frost-byte/TabChannels.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com:frost-byte/TabChannels.git</developerConnection>
+        <url>https://github.com/frost-byte/TabChannelsX</url>
+        <connection>scm:git:git://github.com/frost-byte/TabChannelsX.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com:frost-byte/TabChannelsX.git</developerConnection>
     </scm>
 
     <build>
@@ -124,10 +124,15 @@
     </build>
 
     <repositories>
-        <!-- frost-byte -->
+        <!-- Paper MC -->
         <repository>
-            <id>frost-byte</id>
-            <url>https://frost-byte.net/nexus/repository/maven-public/</url>
+            <id>papermc</id>
+            <url>https://papermc.io/repo/repository/maven-public/</url>
+        </repository>
+        <!-- ProtoclLib/PacketWrapper -->
+        <repository>
+            <id>dmulloy2-repo</id>
+            <url>https://repo.dmulloy2.net/nexus/repository/public/</url>
         </repository>
     </repositories>
 
@@ -136,7 +141,7 @@
         <dependency>
             <groupId>com.destroystokyo.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>${paper.version}</version>
+            <version>${paper_api.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -150,7 +155,7 @@
         <!--Library for listening and sending Minecraft packets-->
         <dependency>
             <groupId>com.comphenix.protocol</groupId>
-            <artifactId>ProtocolLib-API</artifactId>
+            <artifactId>ProtocolLib</artifactId>
             <version>${protocol.version}</version>
         </dependency>
         <dependency>
@@ -158,18 +163,23 @@
             <artifactId>PacketWrapper</artifactId>
             <version>${packetwrapper.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+            <version>16.0.3</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
     <distributionManagement>
-        <downloadUrl>https://frost-byte.net/nexus/repository/maven-public/</downloadUrl>
         <snapshotRepository>
-            <id>nexus-snapshots</id>
-            <name>frost-byte Snapshots</name>
-            <url>https://frost-byte.net/nexus/repository/maven-snapshots/</url>
+            <id>io.cloudrepo.snapshots</id>
+            <name>CloudRepo frost-byte Snapshots Apache Maven Packages</name>
+            <url>https://frostbyte.mycloudrepo.io/repositories/snapshots</url>
         </snapshotRepository>
         <repository>
-            <id>nexus-releases</id>
-            <name>frost-byte Releases</name>
-            <url>https://frost-byte.net/nexus/repository/maven-releases/</url>
+            <id>io.cloudrepo</id>
+            <name>CloudRepo frost-byte Releases Apache Maven Packages</name>
+            <url>https://frostbyte.mycloudrepo.io/repositories/releases</url>
         </repository>
     </distributionManagement>
 </project>

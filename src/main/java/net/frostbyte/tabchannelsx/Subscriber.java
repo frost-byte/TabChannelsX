@@ -1,4 +1,4 @@
-package com.github.games647.tabchannels;
+package net.frostbyte.tabchannelsx;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,9 +32,9 @@ public class Subscriber {
 	 */
 	private Map<String, MutableInt> unreadChannels = new ConcurrentHashMap<>();
 
-	private final TabChannels plugin;
+	private final TabChannelsX plugin;
 
-	public Subscriber(TabChannels plugin, UUID uuid, Channel global) {
+	public Subscriber(TabChannelsX plugin, UUID uuid, Channel global) {
 		this.plugin = plugin;
 		this.selfUUID = uuid;
 		this.currentChannelId = global.getId();

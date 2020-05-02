@@ -1,4 +1,4 @@
-package com.github.games647.tabchannels;
+package net.frostbyte.tabchannelsx;
 
 
 import com.google.common.base.Preconditions;
@@ -12,12 +12,16 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.util.ChatPaginator;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import static net.md_5.bungee.api.ChatColor.GREEN;
 import static org.bukkit.util.ChatPaginator.GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH;
 
-@SuppressWarnings( { "WeakerAccess", "unchecked" })
+@SuppressWarnings({"WeakerAccess", "unchecked", "unused"})
 public abstract class Channel<T>
 {
 
@@ -34,7 +38,6 @@ public abstract class Channel<T>
 	 */
 	protected final Map<UUID, List<T>> chatMap = Maps.newHashMap();
 
-	@SuppressWarnings("WeakerAccess")
 	public Channel(
 		String id,
 		String channelName,
@@ -74,7 +77,8 @@ public abstract class Channel<T>
 			for (UUID recipient : chatMap.keySet()) {
 				if (!self.equals(recipient)) {
 					Player chatPartner = Bukkit.getPlayer(recipient);
-					return chatPartner.getName();
+					if (chatPartner != null)
+						return chatPartner.getName();
 				}
 			}
 		}
@@ -97,7 +101,7 @@ public abstract class Channel<T>
 
 
 	public abstract int getHistoryLength(UUID playerId);
-	public boolean hasRecipients() { return chatMap != null && !chatMap.isEmpty(); }
+	public boolean hasRecipients() { return !chatMap.isEmpty(); }
 	public boolean hasRecipient(UUID playerId)
 	{
 		return chatMap.containsKey(playerId);
@@ -111,8 +115,7 @@ public abstract class Channel<T>
 
 	public void removeRecipient(UUID playerId)
 	{
-		if (chatMap.containsKey(playerId))
-			chatMap.remove(playerId);
+		chatMap.remove(playerId);
 	}
 
 	public List<UUID> getRecipients()
@@ -123,7 +126,7 @@ public abstract class Channel<T>
 	@SuppressWarnings("unused")
 	public List<T> getChatHistory(UUID playerId)
 	{
-		playerId = Preconditions.checkNotNull(playerId, "The player UUID cannot be null.");
+		Preconditions.checkNotNull(playerId, "The player UUID cannot be null.");
 
 		return chatMap.getOrDefault(playerId, null);
 	}

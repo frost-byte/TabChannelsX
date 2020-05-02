@@ -1,6 +1,6 @@
-package com.github.games647.tabchannels.listener;
+package net.frostbyte.tabchannelsx.listener;
 
-import com.github.games647.tabchannels.TabChannels;
+import net.frostbyte.tabchannelsx.TabChannelsX;
 
 
 import org.bukkit.entity.Player;
@@ -13,9 +13,9 @@ import org.bukkit.event.player.PlayerQuitEvent;
 @SuppressWarnings("unused")
 public class SubscriptionListener implements Listener {
 
-	private final TabChannels plugin;
+	private final TabChannelsX plugin;
 
-	public SubscriptionListener(TabChannels plugin) {
+	public SubscriptionListener(TabChannelsX plugin) {
 		this.plugin = plugin;
 	}
 

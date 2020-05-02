@@ -1,6 +1,6 @@
-package com.github.games647.tabchannels;
+package net.frostbyte.tabchannelsx;
 
-import com.github.games647.tabchannels.util.ComponentUtil;
+import net.frostbyte.tabchannelsx.util.ComponentUtil;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static net.md_5.bungee.api.ChatColor.GOLD;
 
 import static net.md_5.bungee.api.chat.BaseComponent.toPlainText;
@@ -33,7 +32,6 @@ public class ComponentChannel extends Channel<BaseComponent>
 		super(id, channelName, privateChannel, groupChannel);
 	}
 
-	@SuppressWarnings("WeakerAccess")
 	public ComponentChannel(String channelName, boolean privateChannel) {
 		super(
 			channelName,
@@ -64,11 +62,8 @@ public class ComponentChannel extends Channel<BaseComponent>
 	}
 
 
-	@SuppressWarnings("ConstantConditions")
 	private int numComponentLines(List<BaseComponent> components)
 	{
-		checkNotNull(components, "The Components cannot be null!");
-
 		if (components == null)
 			return 0;
 
@@ -96,7 +91,8 @@ public class ComponentChannel extends Channel<BaseComponent>
 
 	private int numComponentLines(BaseComponent... components)
 	{
-		checkNotNull(components, "The Components cannot be null!");
+		if (components == null)
+			return 0;
 
 		String plainText = toPlainText(components);
 

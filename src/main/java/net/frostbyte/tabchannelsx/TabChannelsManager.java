@@ -1,4 +1,4 @@
-package com.github.games647.tabchannels;
+package net.frostbyte.tabchannelsx;
 
 import net.md_5.bungee.api.chat.BaseComponent;
 

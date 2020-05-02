@@ -1,4 +1,4 @@
-package com.github.games647.tabchannels.util;
+package net.frostbyte.tabchannelsx.util;
 
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;

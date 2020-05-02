@@ -1,7 +1,10 @@
-package com.github.games647.tabchannels;
+package net.frostbyte.tabchannelsx;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
@@ -16,7 +19,6 @@ import static org.bukkit.util.ChatPaginator.GUARANTEED_NO_WRAP_CHAT_PAGE_WIDTH;
 public class TextChannel extends Channel<String>
 {
 
-	@SuppressWarnings("WeakerAccess")
 	public TextChannel(
 		String id,
 		String channelName,
@@ -26,7 +28,7 @@ public class TextChannel extends Channel<String>
 		super(id, channelName, privateChannel, groupChannel);
 	}
 
-	@SuppressWarnings( { "unused", "WeakerAccess" })
+	@SuppressWarnings("unused")
 	public TextChannel(String channelName, boolean privateChannel) {
 		super(
 			channelName,
@@ -51,8 +53,7 @@ public class TextChannel extends Channel<String>
 		if (history == null || history.isEmpty())
 			return 0;
 
-		String combined = history.stream()
-			.collect(Collectors.joining());
+		String combined = String.join("", history);
 
 		return ChatPaginator.wordWrap(
 			combined,
@@ -147,7 +148,6 @@ public class TextChannel extends Channel<String>
 		if (history == null)
 			return null;
 
-		emptyLineBuilder.append("");
 		for (int i = QUEUE_SIZE - history.size(); i > 0; i--) {
 			emptyLineBuilder.append("\n");
 		}

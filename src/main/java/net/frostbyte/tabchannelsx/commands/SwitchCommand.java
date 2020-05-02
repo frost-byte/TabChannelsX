@@ -1,7 +1,7 @@
-package com.github.games647.tabchannels.commands;
+package net.frostbyte.tabchannelsx.commands;
 
-import com.github.games647.tabchannels.Channel;
-import com.github.games647.tabchannels.TabChannels;
+import net.frostbyte.tabchannelsx.Channel;
+import net.frostbyte.tabchannelsx.TabChannelsX;
 import com.google.common.collect.Lists;
 
 import java.util.List;
@@ -17,9 +17,9 @@ import org.bukkit.entity.Player;
 @SuppressWarnings("NullableProblems")
 public class SwitchCommand implements TabExecutor {
 
-	private final TabChannels plugin;
+	private final TabChannelsX plugin;
 
-	public SwitchCommand(TabChannels plugin) {
+	public SwitchCommand(TabChannelsX plugin) {
 		this.plugin = plugin;
 	}
 
@@ -37,7 +37,7 @@ public class SwitchCommand implements TabExecutor {
 				sender.sendMessage(ChatColor.DARK_RED + "Missing channel name");
 			}
 		} else {
-			sender.sendMessage(ChatColor.DARK_RED + "Only players could have chat channels");
+			sender.sendMessage(ChatColor.DARK_RED + "Only players can have chat channels");
 		}
 
 		return true;
@@ -53,10 +53,10 @@ public class SwitchCommand implements TabExecutor {
 		if (sender instanceof Player) {
 			Player player = (Player) sender;
 			UUID senderId = player.getUniqueId();
-			Set<Channel> subscriptions = plugin.getSubscribedChannels(senderId);
+			Set<Channel<?>> subscriptions = plugin.getSubscribedChannels(senderId);
 
 			List<String> suggestions = Lists.newArrayList();
-			for (Channel channel : subscriptions) {
+			for (Channel<?> channel : subscriptions) {
 				//show only channels where the player is already in
 				if (channel.getRecipients().contains(senderId)) {
 					suggestions.add(channel.getName(senderId).toLowerCase());

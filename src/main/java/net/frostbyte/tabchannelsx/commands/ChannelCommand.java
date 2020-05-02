@@ -1,6 +1,6 @@
-package com.github.games647.tabchannels.commands;
+package net.frostbyte.tabchannelsx.commands;
 
-import com.github.games647.tabchannels.TabChannels;
+import net.frostbyte.tabchannelsx.TabChannelsX;
 
 import java.util.Arrays;
 
@@ -9,17 +9,23 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.jetbrains.annotations.NotNull;
 
 public class ChannelCommand implements CommandExecutor {
 
-    private final TabChannels plugin;
+    private final TabChannelsX plugin;
 
-    public ChannelCommand(TabChannels plugin) {
+    public ChannelCommand(TabChannelsX plugin) {
         this.plugin = plugin;
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(
+        @NotNull CommandSender sender,
+        @NotNull Command command,
+        @NotNull String label,
+        String[] args
+    ) {
         if (args.length > 0) {
             String subCommand = args[0];
             if ("switch".equalsIgnoreCase(subCommand) || "create".equalsIgnoreCase(subCommand)) {
