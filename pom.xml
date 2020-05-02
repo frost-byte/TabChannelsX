@@ -16,7 +16,6 @@
     </description>
 
     <properties>
-        <paper.version>1.15.2</paper.version>
         <paper_api.version>1.15.2-R0.1-SNAPSHOT</paper_api.version>
         <protocol.version>4.5.0</protocol.version>
         <packetwrapper.version>1.13-R0.1-SNAPSHOT</packetwrapper.version>
@@ -142,13 +141,6 @@
             <groupId>com.destroystokyo.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>${paper_api.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.destroystokyo.paper</groupId>
-            <artifactId>paper</artifactId>
-            <version>${paper.version}</version>
             <scope>provided</scope>
         </dependency>
 
